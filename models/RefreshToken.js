@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-const OtpCode = sequelize.define('OtpCode', {
+const RefreshToken = sequelize.define('RefreshToken', {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -9,37 +9,24 @@ const OtpCode = sequelize.define('OtpCode', {
     },
     user_id: {
         type: DataTypes.INTEGER,
-        allowNull: true
-    },
-    canal: {
-        type: DataTypes.ENUM('email', 'sms'),
         allowNull: false
     },
-    destinataire: {
+    token_hash: {
         type: DataTypes.STRING,
         allowNull: false
-    },
-    code_hash: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    tentatives: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 0
     },
     expire_at: {
         type: DataTypes.DATE,
         allowNull: false
     },
-    utilise: {
+    revoque: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false
     }
 }, {
-    tableName: 'otp_codes',
+    tableName: 'refresh_tokens',
     timestamps: true
 });
 
-module.exports = OtpCode;
+module.exports = RefreshToken;
