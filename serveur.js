@@ -1,8 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./src/config/swagger');
-const { sequelize } = require('./src/models');
+const swaggerSpec = require('./config/swagger');
+const { sequelize } = require('./models');
 
 const app = express();
 
@@ -10,14 +10,11 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ─── Documentation Swagger ───
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// ─── Routes ───
-const authRoutes = require('./src/routes/auth.routes');
+const authRoutes = require('./routes/auth_routes');
 app.use('/auth', authRoutes);
 
-// ─── Route de test ───
 app.get('/', (req, res) => {
     res.json({ message: 'API en ligne', docs: 'http://localhost:3000/api-docs' });
 });

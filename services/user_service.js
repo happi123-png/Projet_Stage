@@ -1,11 +1,15 @@
 const { Utilisateur } = require('../models');
 
 async function trouverParEmail(email) {
-    return utilisateur.findOne({ where: { email } });
+    return Utilisateur.findOne({ where: { email } });
 }
 
-async function trouverParTelephone(telephone) {
+async function trouverParTel(telephone) {
     return Utilisateur.findOne({ where: { telephone } });
+}
+
+async function trouverParId(id) {
+    return Utilisateur.findOne({ where: { id } });
 }
 
 /*async function trouverAdminParEmail(email) {
@@ -25,12 +29,13 @@ async function creerUtilisateur({ username, email, telephone, genre, password_ha
 }
 
 async function activerCompte(userId) {
-    return User.update({ statut: 'active' }, { where: { id: userId } });
+    return Utilisateur.update({ statut: 'active' }, { where: { id: userId } });
 }
 
 module.exports = {
     trouverParEmail,
-    trouverParTelephone,
+    trouverParTel,
+    trouverParId,
     creerUtilisateur,
     activerCompte
 };

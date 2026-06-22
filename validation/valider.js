@@ -36,7 +36,7 @@ const signupSchematotal = Joi.object({
         .valid('CLIENT', 'PROFESSIONNEL')
         .required()
         .messages({
-            'any.only': 'Le type d\'utilisateur doit être soit CLIENT ou ADMIN.',
+            'any.only': 'Le type d\'utilisateur doit être soit CLIENT ou PROFESSIONNEL.',
             'any.required': 'Le type d\'utilisateur est obligatoire.'
         })
 });
@@ -150,9 +150,7 @@ const logoutSchema = Joi.object({
 });
 
 module.exports = {
-    signupWebSchema,
-    signupMobileSchema,
-    signupSchema,
+    signupSchematotal,
     requestOtpWebSchema,
     requestOtpMobileSchema,
     verifyOtpWebSchema,
