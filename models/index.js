@@ -18,7 +18,7 @@ Administrateur.belongsTo(Utilisateur, { foreignKey: 'utilisateur_id' });
 OtpCode.belongsTo(Utilisateur, { foreignKey: 'user_id' });
 
 Utilisateur.hasMany(RefreshToken, { foreignKey: 'user_id' });
-RefreshToken.belongsTo(User, { foreignKey: 'user_id' });
+RefreshToken.belongsTo(Utilisateur, { foreignKey: 'user_id' });
 
 module.exports = {
     sequelize,

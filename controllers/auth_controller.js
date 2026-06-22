@@ -102,3 +102,11 @@ async function loginMobile(req, res) {
 async function requestOtp(req, res) {
 
 }
+
+module.exports = {
+    getMe,
+    signup,
+    loginWeb,
+    loginMobile,
+    requestOtp
+};
