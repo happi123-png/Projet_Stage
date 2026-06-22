@@ -1,23 +1,25 @@
-const { User, AdminUser } = require('../models');
+const { Utilisateur } = require('../models');
 
 async function trouverParEmail(email) {
-    return User.findOne({ where: { email } });
+    return utilisateur.findOne({ where: { email } });
 }
 
 async function trouverParTelephone(telephone) {
-    return User.findOne({ where: { telephone } });
+    return Utilisateur.findOne({ where: { telephone } });
 }
 
-async function trouverAdminParEmail(email) {
+/*async function trouverAdminParEmail(email) {
     return AdminUser.findOne({ where: { email } });
-}
+}*/
 
-async function creerUtilisateur({ nom, email, telephone, password_hash }) {
-    return User.create({
-        nom,
-        email: email || null,
-        telephone: telephone || null,
-        password_hash,
+async function creerUtilisateur({ username, email, telephone, genre, password_hash, type_utilisateur }) {
+    return Utilisateur.create({
+        username,
+        email: email,
+        telephone: telephone,
+        genre: genre,
+        password_hash: password_hash,
+        type_utilisateur: type_utilisateur,
         statut: 'pending'
     });
 }
@@ -29,7 +31,6 @@ async function activerCompte(userId) {
 module.exports = {
     trouverParEmail,
     trouverParTelephone,
-    trouverAdminParEmail,
     creerUtilisateur,
     activerCompte
 };
