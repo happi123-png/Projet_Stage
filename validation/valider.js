@@ -141,14 +141,15 @@ const loginAdminSchema = Joi.object({
 });
 
 const refreshSchema = Joi.object({
-    refresh_token: Joi.string().required().messages({
-        'any.required': 'Refresh token obligatoire'
+    refreshToken: Joi.string().required().messages({
+        'any.required': 'Le champ refreshtoken est obligatoire.',
+        'string.empty': 'Le refresh token ne peut pas être vide.'
     })
 });
 
 const logoutSchema = Joi.object({
-    refresh_token: Joi.string().required().messages({
-        'any.required': 'Refresh token obligatoire'
+    refreshToken: Joi.string().required().messages({
+        'any.required': 'Le champ refreshtoken est obligatoire pour la déconnexion.'
     })
 });
 
