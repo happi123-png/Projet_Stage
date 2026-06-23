@@ -260,14 +260,14 @@ async function refreshToken(req, res) {
             return res.status(400).json({ message: "Refresh token manquant." });
         }
 
-        const tokenStocke = await RefreshToken.findOne({ where: { token: refreshToken } });
+        const tokenStocke = await RefreshToken.findOne({ where: { token_hash: refreshToken } });
         if (!tokenStocke) {
             return res.status(403).json({ message: "Refresh token invalide ou révoqué." });
         }
 
         jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, async(err, decoded) => {
             if (err) {
-                await RefreshToken.destroy({ where: { token: refreshToken } });
+                await RefreshToken.destroy({ where: { token_hash: refreshToken } });
                 return res.status(401).json({ message: "Refresh token expiré ou corrompu." });
             }
 
@@ -276,7 +276,6 @@ async function refreshToken(req, res) {
                 return res.status(404).json({ message: "Utilisateur introuvable." });
             }
 
-            // 4. Générer le nouvel Access Token
             const accessToken = jwt.sign({
                     id: utilisateur.id,
                     email: utilisateur.email,
@@ -301,9 +300,7 @@ async function logout(req, res) {
         if (!refreshToken) {
             return res.status(400).json({ message: "Refresh token manquant." });
         }
-
-        // Supprimer le refresh token de la base de données pour invalider la session
-        const nbrSupprime = await RefreshToken.destroy({ where: { token: refreshToken } });
+        const nbrSupprime = await RefreshToken.destroy({ where: { token_hash: refreshToken } });
 
         if (nbrSupprime === 0) {
             return res.status(404).json({ message: "Token introuvable ou déjà révoqué." });
