@@ -1,5 +1,11 @@
 const bcrypt = require('bcrypt');
+const db = require('../models');
+const sequelize = db.sequelize; // 
+
 const userService = require('../services/user_service');
+const clientService = require('../services/client_service');
+const adminService = require('../services/administrateur_service');
+const profService = require('../services/professionnel_service');
 const otpService = require('../services/otp');
 const mailService = require('../services/email');
 const smsService = require('../services/sms');
@@ -7,7 +13,7 @@ const tokenService = require('../services/token');
 
 function normaliserTelephone(tel) {
     if (!tel) return null;
-    let cleanTel = tel.replace(/[\s.-]/g, ''); // Enlever les espaces ou tirets cachés
+    let cleanTel = tel.replace(/[\s.-]/g, '');
     if (cleanTel.startsWith('+237')) return cleanTel;
     if (cleanTel.startsWith('237') && cleanTel.length === 12) return '+' + cleanTel;
     if (cleanTel.length === 9) return '+237' + cleanTel;
@@ -15,24 +21,47 @@ function normaliserTelephone(tel) {
 }
 
 async function getMe(req, res) {
-    res.status(200).json({ message: 'Profil', user: req.user })
+    res.status(200).json({ message: 'Profil', user: req.user });
 }
 
 async function signup(req, res) {
+    const t = await sequelize.transaction();
     try {
-        const { username, email, telephone, genre, password, type_utilisateur } = req.body;
-        const existantParEmail = await userService.trouverParEmail(email)
+        const {
+            username,
+            email,
+            telephone,
+            genre,
+            password,
+            type_utilisateur,
+            type_professionnel,
+            codeParrain
+        } = req.body;
 
         if (!username || !email || !telephone || !genre || !password || !type_utilisateur) {
-            return res.status(400).json({ message: 'Donnée manquante' })
+            await t.rollback();
+            return res.status(400).json({ message: 'Donnée manquante' });
         }
-        if (existantParEmail) return res.status(400).json({
-            message: 'Email déjà utilisé'
-        })
-        const existantParTel = await userService.trouverParTel(telephone)
-        if (existantParTel) return res.status(400).json({ message: 'Numero de telephone deja utilise' })
 
-        const password_hash = await bcrypt.hash(password, 10)
+        if (type_utilisateur === 'PROFESSIONNEL' && !type_professionnel) {
+            await t.rollback();
+            return res.status(400).json({ message: 'Veuillez cocher COIFFEUR_INDEPENDANT ou SALON' });
+        }
+
+        const existantParEmail = await userService.trouverParEmail(email);
+        if (existantParEmail) {
+            await t.rollback();
+            return res.status(400).json({ message: 'Email déjà utilisé' });
+        }
+
+        const existantParTel = await userService.trouverParTel(telephone);
+        if (existantParTel) {
+            await t.rollback();
+            return res.status(400).json({ message: 'Numéro de téléphone déjà utilisé' });
+        }
+
+        // 3. Hachage du mot de passe
+        const password_hash = await bcrypt.hash(password, 10);
 
         const user = await userService.creerUtilisateur({
             username,
@@ -41,9 +70,30 @@ async function signup(req, res) {
             genre,
             password_hash,
             type_utilisateur
-        })
-        const code = await otpService.creerOtp(user.id, 'email', email)
-        const resultat = await mailService.envoyerOtp(email, code, user.username)
+        }, t);
+
+        if (type_utilisateur === 'CLIENT') {
+            const parrain = (codeParrain && codeParrain.trim() !== "") ? codeParrain.trim() : null;
+
+            await clientService.creerClient({
+                utilisateur_id: user.id,
+                nom: null,
+                prenom: null,
+                codeParrain: parrain
+            }, t);
+
+        } else if (type_utilisateur === 'PROFESSIONNEL') {
+            await profService.creerProfessionnel({
+                utilisateur_id: user.id,
+                type_professionnel: type_professionnel,
+                nom_usage: username
+            }, t);
+        }
+
+        await t.commit();
+
+        const code = await otpService.creerOtp(user.id, 'email', email);
+        await mailService.envoyerOtp(email, code, user.username);
 
         return res.status(201).json({
             message: `Utilisateur créé avec succès ! Code OTP envoyé sur l'email ${user.email}`,
@@ -51,57 +101,55 @@ async function signup(req, res) {
         });
 
     } catch (error) {
-        console.log(error)
-        res.status(500).json({
-            message: 'Erreur serveur lors de l\'inscription'
-        })
+        if (!t.finished) await t.rollback();
+        console.error('[ERREUR SIGNUP] :', error);
+        res.status(500).json({ message: "Erreur serveur lors de l'inscription" });
     }
-
 }
 
 async function loginWeb(req, res) {
     try {
-        const { email, password } = req.body
-        if (!email || !password) return res.status(400).json({ message: 'Donnée manquante' })
+        const { email, password } = req.body;
+        if (!email || !password) return res.status(400).json({ message: 'Donnée manquante' });
 
-        const user = await userService.trouverParEmail(email)
-        if (!user) return res.status(401).json({ message: 'Email ou mot de passe incorrect' })
-        const pass = await bcrypt.compare(password, user.password_hash)
-        if (!pass) return res.status(401).json({ message: 'Email ou mot de passe incorrect' })
+        const user = await userService.trouverParEmail(email);
+        if (!user) return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
+        const pass = await bcrypt.compare(password, user.password_hash);
+        if (!pass) return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
 
-        const code = await otpService.creerOtp(user.id, 'email', email)
-        const resultat = await mailService.envoyerOtp(email, code, user.username)
+        const code = await otpService.creerOtp(user.id, 'email', email);
+        await mailService.envoyerOtp(email, code, user.username);
 
         res.status(200).json({
-            message: `Code otp envoye sur l\'email ${user.email}, ce code expire dans 5 minute`
-        })
+            message: `Code otp envoyé sur l'email ${user.email}, ce code expire dans 5 minutes`
+        });
     } catch (error) {
-        console.log(error)
-        res.status(500).json({ message: 'Erreur lors de la connexion par email' })
+        console.log(error);
+        res.status(500).json({ message: 'Erreur lors de la connexion par email' });
     }
 }
 
 async function loginMobile(req, res) {
     try {
-        const { telephone, password } = req.body
-        if (!telephone || !password) return res.status(400).json({ messgae: 'Donnée invalide' })
-        const user = await userService.trouverParTel(telephone)
-        if (!user) return res.status(401).json({ message: 'Numéro de télèphone ou mot de passe incorrect' })
-        const compare = await bcrypt.compare(password, user.password_hash)
-        if (!compare) return res.status(401).json({ message: 'Numéro de télèphone ou mot de passe incorrect' })
-        const telCle = normaliserTelephone(telephone)
-        const code = await otpService.creerOtp(user.id, 'sms', telCle)
-        const resultat = await smsService.envoyerOtp(telCle, code)
-        res.status(200).json({ message: `Code otp envoye au numero ${user.telephone},  ce code expire dans 5 minute`, codeOtp: code })
+        const { telephone, password } = req.body;
+        if (!telephone || !password) return res.status(400).json({ message: 'Donnée invalide' });
+        const user = await userService.trouverParTel(telephone);
+        if (!user) return res.status(401).json({ message: 'Numéro de téléphone ou mot de passe incorrect' });
+        const compare = await bcrypt.compare(password, user.password_hash);
+        if (!compare) return res.status(401).json({ message: 'Numéro de téléphone ou mot de passe incorrect' });
+
+        const telCle = normaliserTelephone(telephone);
+        const code = await otpService.creerOtp(user.id, 'sms', telCle);
+        await smsService.envoyerOtp(telCle, code);
+
+        res.status(200).json({ message: `Code otp envoyé au numéro ${user.telephone}, ce code expire dans 5 minutes`, codeOtp: code });
     } catch (error) {
-        console.log(error)
-        res.status(500).json({ message: 'Erreur lors de la connexion via le mobile' })
+        console.log(error);
+        res.status(500).json({ message: 'Erreur lors de la connexion via le mobile' });
     }
 }
 
-async function requestOtp(req, res) {
-
-}
+async function requestOtp(req, res) {}
 
 module.exports = {
     getMe,

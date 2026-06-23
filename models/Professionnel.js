@@ -8,11 +8,11 @@ const Professionnel = sequelize.define('Professionnel', {
     },
     type_professionnel: {
         type: DataTypes.ENUM('COIFFEUR_INDEPENDANT', 'SALON'),
-        allowNull: false
+        allowNull: true
     },
     nom_usage: {
         type: DataTypes.STRING(150),
-        allowNull: false
+        allowNull: true
     },
     description: {
         type: DataTypes.TEXT,
@@ -20,33 +20,33 @@ const Professionnel = sequelize.define('Professionnel', {
     },
     adresse: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
     ville: {
         type: DataTypes.STRING(100),
-        allowNull: false
+        allowNull: true
     },
     latitude: {
         type: DataTypes.DOUBLE,
-        allowNull: false
+        allowNull: true
     },
     longitude: {
         type: DataTypes.DOUBLE,
-        allowNull: false
+        allowNull: true
     },
     est_verifie: {
         type: DataTypes.BOOLEAN,
-        allowNull: false,
+        allowNull: true,
         defaultValue: false
     },
     note_moyenne: {
         type: DataTypes.FLOAT,
-        allowNull: false,
+        allowNull: true,
         defaultValue: 0.0
     },
     code_parrainage_propre: {
         type: DataTypes.STRING(50),
-        allowNull: false,
+        allowNull: true,
         unique: true
     }
 }, {
