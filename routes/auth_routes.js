@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 
-const authController = require('../controllers/auth.controller');
+const authController = require('../controllers/auth_controller');
 
 // Importation des middlewares
 const validate = require('../middlewares/validate');
-const rateLimiter = require('../middlewares/rateLimiter'); // Si tu as configuré un limiteur
-const verifyToken = require('../middlewares/verifyToken'); // Pour getMe ou logout
+const rateLimiter = require('../middlewares/limitetentative'); // Si tu as configuré un limiteur
+const verifyToken = require('../middlewares/verifierToken'); // Pour getMe ou logout
 
 const {
     signupSchematotal,
@@ -29,14 +29,14 @@ router.post('/login/web', validate(loginWebSchema), authController.loginWeb);
 router.post('/login/mobile', validate(loginMobileSchema), authController.loginMobile);
 
 // 4. Connexion Administration
-/*router.post('/login/admin', validate(loginAdminSchema), authController.loginAdmin);
+//router.post('/login/admin', validate(loginAdminSchema), authController.loginAdmin);
 
 // ─────────────────────────────────────────
 // ROUTES OTP (Demande & Vérification)
 // ─────────────────────────────────────────
 
 // 5. Demande / Renvoyer OTP - Web
-router.post('/otp/request/web', validate(requestOtpWebSchema), authController.requestOtp);
+/*router.post('/otp/request/web', validate(requestOtpWebSchema), authController.requestOtp);
 
 // 6. Demande / Renvoyer OTP - Mobile
 router.post('/otp/request/mobile', validate(requestOtpMobileSchema), authController.requestOtp);
