@@ -38,7 +38,10 @@ const signupSchematotal = Joi.object({
         .messages({
             'any.only': 'Le type d\'utilisateur doit être soit CLIENT ou PROFESSIONNEL.',
             'any.required': 'Le type d\'utilisateur est obligatoire.'
-        })
+        }),
+
+    type_professionnel: Joi.string().valid('COIFFEUR_INDEPENDANT', 'SALON').optional(),
+    codeParrain: Joi.string().alphanum().length(8).allow('', null).optional()
 });
 
 

@@ -8,11 +8,15 @@ const Client = sequelize.define('Client', {
     },
     nom: {
         type: DataTypes.STRING(100),
-        allowNull: false
+        allowNull: true
     },
     prenom: {
         type: DataTypes.STRING(100),
-        allowNull: false
+        allowNull: true
+    },
+    codeParrain: {
+        type: DataTypes.STRING(100),
+        allowNull: true
     }
 }, {
     tableName: 'clients',
