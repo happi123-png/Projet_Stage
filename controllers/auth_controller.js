@@ -92,7 +92,7 @@ async function loginMobile(req, res) {
         const telCle = normaliserTelephone(telephone)
         const code = await otpService.creerOtp(user.id, 'sms', telCle)
         const resultat = await smsService.envoyerOtp(telCle, code)
-        res.status(200).json({ message: `Code otp envoye au numero ${user.telephone},  ce code expire dans 5 minute` })
+        res.status(200).json({ message: `Code otp envoye au numero ${user.telephone},  ce code expire dans 5 minute`, codeOtp: code })
     } catch (error) {
         console.log(error)
         res.status(500).json({ message: 'Erreur lors de la connexion via le mobile' })

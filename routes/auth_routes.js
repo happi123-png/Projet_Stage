@@ -36,7 +36,7 @@ router.post('/login/mobile', validate(loginMobileSchema), authController.loginMo
 // ─────────────────────────────────────────
 
 // 5. Demande / Renvoyer OTP - Web
-router.post('/otp/request/web', validate(requestOtpWebSchema), authController.requestOtp);
+/*router.post('/otp/request/web', validate(requestOtpWebSchema), authController.requestOtp);
 
 // 6. Demande / Renvoyer OTP - Mobile
 router.post('/otp/request/mobile', validate(requestOtpMobileSchema), authController.requestOtp);
@@ -58,6 +58,6 @@ router.post('/refresh', validate(refreshSchema), authController.refresh);
 router.post('/logout', validate(logoutSchema), authController.logout);
 
 // 11. Obtenir son profil (Route protégée par Bearer Token)
-router.get('/me', verifyToken, authController.getMe);
+router.get('/me', verifyToken, authController.getMe);*/
 
 module.exports = router;
