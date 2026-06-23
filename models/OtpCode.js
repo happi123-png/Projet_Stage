@@ -36,6 +36,11 @@ const OtpCode = sequelize.define('OtpCode', {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false
+    },
+    valide: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
     }
 }, {
     tableName: 'otp_codes',

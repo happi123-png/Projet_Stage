@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const db = require('../models');
 const sequelize = db.sequelize; // 
+const jwt = require('jsonwebtoken')
 
 const userService = require('../services/user_service');
 const clientService = require('../services/client_service');
@@ -10,6 +11,8 @@ const otpService = require('../services/otp');
 const mailService = require('../services/email');
 const smsService = require('../services/sms');
 const tokenService = require('../services/token');
+const RefreshToken = require('../models/refreshToken');
+
 
 function normaliserTelephone(tel) {
     if (!tel) return null;
@@ -149,12 +152,180 @@ async function loginMobile(req, res) {
     }
 }
 
-async function requestOtp(req, res) {}
+async function requestOtpWeb(req, res) {
+    try {
+        const { email } = req.body
+        if (!email) return res.status(400).json({ message: 'Email manquant' })
+        const user = await userService.trouverParEmail(email)
+        if (!user) return res.status(404).json({ message: 'Email non enregistré' })
+
+        const code = await otpService.creerOtp(user.id, 'email', email);
+        await mailService.envoyerOtp(email, code, user.username);
+
+        res.status(200).json({
+            message: `Code otp envoyé sur l'email ${user.email}, ce code expire dans 5 minutes`
+        });
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            message: 'Erreur lors de la demande d\' otp par web'
+        })
+    }
+}
+
+async function requestOtpMobile(req, res) {
+    try {
+        const { telephone } = req.body
+        if (!telephone) return res.status(400).json({ message: 'Donnée invalide' })
+        const user = await userService.trouverParTel(telephone)
+        if (!user) return res.status(404).json({ message: 'Numero de telephone non enregistrer' })
+        const telCle = normaliserTelephone(telephone);
+        const code = await otpService.creerOtp(user.id, 'sms', telCle);
+        await smsService.envoyerOtp(telCle, code);
+        res.status(200).json({
+            message: `Code otp envoyé au numero de telephone ${user.email}, ce code expire dans 5 minutes`,
+            codeOtp: code
+        });
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            message: 'Erreur lors de la demande d\' otp par sms'
+        })
+    }
+}
+
+async function verifyOtpWeb(req, res) {
+    try {
+        const { email, code } = req.body
+        if (!email || !code) return res.status(400).json({ message: 'Donnée manquant' })
+
+        const user = await userService.trouverParEmail(email)
+        if (!user) return res.status(404).json({ message: 'Utilisateur non repertorier' })
+
+        const verifie = await otpService.verifierOtp(user.id, code)
+        if (!verifie.valide) {
+            return res.status(401).json({
+                message: verifie.message
+            });
+        }
+        const token = await tokenService.genererAccessToken(user.id)
+        const userResponse = user.toJSON();
+        delete userResponse.password_hash;
+        res.status(200).json({
+            message: `Heureux de vous retrouver Mr / Mne ${user.username}.`,
+            Utilisateur: userResponse,
+            token: token
+        })
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            message: 'Erreur lors de la verification d\' otp par web'
+        })
+    }
+}
+
+async function verifyOtpMobile(req, res) {
+    try {
+        const { telephone, code } = req.body
+        if (!telephone || !code) return res.status(400).json({ message: 'Donnée invalide' })
+        const user = await userService.trouverParTel(telephone)
+        if (!user) return res.status(404).json({ message: 'Numero de telephone non enregistrer' })
+        const verifier = await otpService.verifierOtp(user.id, code)
+        if (!verifier.valide) {
+            return res.status(401).json({
+                message: verifier.message
+            });
+        }
+        const token = await tokenService.genererAccessToken(user.id)
+        const userResponse = user.toJSON();
+        delete userResponse.password_hash;
+        res.status(200).json({
+            message: `Heureux de vous retrouver Mr / Mne ${user.username}.`,
+            Utilisateur: userResponse,
+            token: token
+        })
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            message: 'Erreur lors de la verification d\' otp par mobile'
+        })
+    }
+}
+
+async function refreshToken(req, res) {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(400).json({ message: "Refresh token manquant." });
+        }
+
+        const tokenStocke = await RefreshToken.findOne({ where: { token: refreshToken } });
+        if (!tokenStocke) {
+            return res.status(403).json({ message: "Refresh token invalide ou révoqué." });
+        }
+
+        jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, async(err, decoded) => {
+            if (err) {
+                await RefreshToken.destroy({ where: { token: refreshToken } });
+                return res.status(401).json({ message: "Refresh token expiré ou corrompu." });
+            }
+
+            const utilisateur = await Utilisateur.findByPk(decoded.id);
+            if (!utilisateur) {
+                return res.status(404).json({ message: "Utilisateur introuvable." });
+            }
+
+            // 4. Générer le nouvel Access Token
+            const accessToken = jwt.sign({
+                    id: utilisateur.id,
+                    email: utilisateur.email,
+                    type_utilisateur: utilisateur.type_utilisateur
+                },
+                process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' }
+            );
+
+            return res.status(200).json({ accessToken });
+        });
+
+    } catch (error) {
+        console.error("Erreur lors du refresh token :", error);
+        return res.status(500).json({ message: "Erreur interne du serveur." });
+    }
+}
+
+async function logout(req, res) {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(400).json({ message: "Refresh token manquant." });
+        }
+
+        // Supprimer le refresh token de la base de données pour invalider la session
+        const nbrSupprime = await RefreshToken.destroy({ where: { token: refreshToken } });
+
+        if (nbrSupprime === 0) {
+            return res.status(404).json({ message: "Token introuvable ou déjà révoqué." });
+        }
+
+        return res.status(200).json({ message: "Déconnexion réussie et session révoquée." });
+
+    } catch (error) {
+        console.error("Erreur lors de la déconnexion :", error);
+        return res.status(500).json({ message: "Erreur interne du serveur." });
+    }
+}
 
 module.exports = {
     getMe,
     signup,
     loginWeb,
     loginMobile,
-    requestOtp
+    verifyOtpWeb,
+    requestOtpWeb,
+    verifyOtpMobile,
+    requestOtpMobile,
+    refreshToken,
+    logout
 };
